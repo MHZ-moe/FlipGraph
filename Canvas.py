@@ -48,7 +48,7 @@ class Canvas(QLabel):
         self.y_ = 0
         
         self.main_mode_ = MainMode.EDIT_MODE
-        self.sub_mode_ = SubMode.START
+        self.sub_mode_ = SubMode.DRAW_NODE
         
         self.i_ = 0
         self.first_point = None
@@ -59,6 +59,13 @@ class Canvas(QLabel):
         
         self.last_graphs = []
         self.next_graphs = []
+        
+        self.last_main_mode = []
+        self.next_main_mode = []
+        
+        self.last_sub_mode = []
+        self.next_sub_mode = []
+        
         self.graph = Path(Nodes = [])
         self.layers = []
 
@@ -141,6 +148,8 @@ class Canvas(QLabel):
     def draw_node(self,pen,painter,point):
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.last_graphs.append(deepcopy(self.graph))
+            self.last_main_mode.append(self.main_mode_)
+            self.last_sub_mode.append(self.sub_mode_)
             self.next_graphs.clear()
             self.layers.clear()
             pen.setColor(Qt.black)
@@ -159,6 +168,8 @@ class Canvas(QLabel):
         else:
             if (not self.graph.crosses() and self.graph.is_spanning_path()):
                 self.last_graphs.append(deepcopy(self.graph))
+                self.last_main_mode.append(self.main_mode_)
+                self.last_sub_mode.append(self.sub_mode_)
                 self.next_graphs.clear()
                 self.layers.clear()
                 pen.setColor(Qt.black)
@@ -176,6 +187,7 @@ class Canvas(QLabel):
                 self.message.emit("Added: " + str(node))
             else:
                 self.message.emit("Not yet. The path is not valid.")
+        self.edge_diff = len(self.graph._Lines) + 1 - len(self.graph._Nodes)
     
     """
     Draw an edge (a line) between two Nodes
@@ -194,6 +206,8 @@ class Canvas(QLabel):
     def draw_edge(self,painter: QPainter,pen: QPen,node1: Node,node2: Node):
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.last_graphs.append(deepcopy(self.graph))
+            self.last_main_mode.append(self.main_mode_)
+            self.last_sub_mode.append(self.sub_mode_)
             self.next_graphs.clear()
             pen.setColor(Qt.black)
             pen.setWidth(1)
@@ -206,6 +220,8 @@ class Canvas(QLabel):
         else:
             if (self.edge_diff < 1):
                 self.last_graphs.append(deepcopy(self.graph))
+                self.last_main_mode.append(self.main_mode_)
+                self.last_sub_mode.append(self.sub_mode_)
                 self.next_graphs.clear()
                 pen.setColor(Qt.black)
                 painter.setPen(pen)
@@ -234,6 +250,8 @@ class Canvas(QLabel):
     def delete_edge(self,painter: QPainter,pen: QPen,node1: Node,node2: Node) -> None:
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.last_graphs.append(deepcopy(self.graph))
+            self.last_main_mode.append(self.main_mode_)
+            self.last_sub_mode.append(self.sub_mode_)
             self.next_graphs.clear()
             pen.setColor(Qt.white)
             painter.setPen(pen)
@@ -249,6 +267,8 @@ class Canvas(QLabel):
         else:
             if (self.edge_diff > -1):
                 self.last_graphs.append(deepcopy(self.graph))
+                self.last_main_mode.append(self.main_mode_)
+                self.last_sub_mode.append(self.sub_mode_)
                 self.next_graphs.clear()
                 pen.setColor(Qt.white)
                 painter.setPen(pen)
@@ -280,6 +300,8 @@ class Canvas(QLabel):
         if (self.main_mode_ == MainMode.EDIT_MODE):
             assert(node in self.graph.getNodes())
             self.last_graphs.append(deepcopy(self.graph))
+            self.last_main_mode.append(self.main_mode_)
+            self.last_sub_mode.append(self.sub_mode_)
             self.next_graphs.clear()
             self.layers.clear()
             pen.setColor(Qt.white)
@@ -317,6 +339,8 @@ class Canvas(QLabel):
     """
     def flip(self, painter: QPainter):
         self.last_graphs.append(deepcopy(self.graph))
+        self.last_main_mode.append(self.main_mode_)
+        self.last_sub_mode.append(self.sub_mode_)
         self.next_graphs.clear()
         pen = QPen()
         nodelist = self.graph.getNodes()
@@ -436,6 +460,8 @@ class Canvas(QLabel):
     """
     def reset(self):
         self.last_graphs.append(deepcopy(self.graph))
+        self.last_main_mode.append(self.main_mode_)
+        self.last_sub_mode.append(self.sub_mode_)
         self.next_graphs.clear()
         self.clear()
         whiteboard = QPixmap(self.width_, self.height_)
@@ -639,7 +665,22 @@ class Canvas(QLabel):
     def undo(self):
         try: 
             last_graph = self.last_graphs.pop(-1)
+            last_mainmode = self.last_main_mode.pop(-1)
+            last_submode = self.last_sub_mode.pop(-1)
+            
             self.next_graphs.append(deepcopy(self.graph))
+            self.next_main_mode.append(self.main_mode_)
+            self.next_sub_mode.append(self.sub_mode_)
+            
+            
+            if (self.main_mode_ != last_mainmode):
+                self.main_mode_change.emit()
+            if (self.sub_mode_ != last_submode):
+                self.sub_mode_change.emit(self.sub_mode_)
+            self.main_mode_ = last_mainmode
+            self.sub_mode_ = last_submode
+            
+            
             self.graph = deepcopy(last_graph)
             self.clear()
             whiteboard = QPixmap(self.width_, self.height_)
@@ -659,7 +700,21 @@ class Canvas(QLabel):
     def redo(self):
         try:
             next_graph = self.next_graphs.pop(-1)
+            next_mainmode = self.next_main_mode.pop(-1)
+            next_submode = self.next_sub_mode.pop(-1)
+            
             self.last_graphs.append(deepcopy(self.graph))
+            self.last_main_mode.append(self.main_mode_)
+            self.last_sub_mode.append(self.sub_mode_)
+            
+            
+            if (self.main_mode_ != next_mainmode):
+                self.main_mode_change.emit()
+            if (self.sub_mode_ != next_submode):
+                self.sub_mode_change.emit(self.sub_mode_)
+            self.main_mode_ = next_mainmode
+            self.sub_mode_ = next_submode
+            
             self.graph = deepcopy(next_graph)
             self.clear()
             whiteboard = QPixmap(self.width_, self.height_)
@@ -684,6 +739,8 @@ class Canvas(QLabel):
                 try:
                     last_graph = self.last_graphs.pop(-1)
                     self.next_graphs.append(deepcopy(self.graph))
+                    self.next_main_mode.append(self.main_mode_)
+                    self.next_sub_mode.append(self.sub_mode_)
                     self.graph = deepcopy(last_graph)
                 except:
                     break
@@ -711,6 +768,8 @@ class Canvas(QLabel):
                 try: 
                     next_graph = self.next_graphs.pop(-1)
                     self.last_graphs.append(deepcopy(self.graph))
+                    self.last_main_mode.append(self.main_mode_)
+                    self.last_sub_mode.append(self.sub_mode_)
                     self.graph = deepcopy(next_graph)
                 except:
                     break
@@ -861,6 +920,7 @@ class Canvas(QLabel):
                 if (len(linelist) == 1):
                     line = linelist[0]
                     if (self.main_mode_ == MainMode.FLIP_MODE and self.edge_diff != 0 and not line in self.bad_edge):
+                        print(self.edge_diff)
                         self.message.emit("Invalid Action: Path already not valid")
                         self.first_point, self.second_point = None, None
                     else:

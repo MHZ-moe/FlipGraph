@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         
         # Variables
         self.main_mode_ = MainMode.EDIT_MODE
-        self.sub_mode_ = SubMode.START
+        self.sub_mode_ = SubMode.DRAW_NODE
         
         # Canvas
         self.canvas = Canvas(self.width_, self.height_)
@@ -76,6 +76,7 @@ class MainWindow(QMainWindow):
         # Flip Button
         self.toolbar1.addWidget(self.button5)
         self.button5.setCheckable(True)
+        self.button5.setStyleSheet("color: black; background-color: yellow")
         self.toolbar1.addSeparator()
         
         # Basic functions
@@ -83,6 +84,7 @@ class MainWindow(QMainWindow):
             button.setCheckable(True)
             button.setChecked(False)
             self.toolbar1.addWidget(button)
+        self.button1.setChecked(True)
         self.toolbar1.addSeparator()
         
         # Flip graph specific functions
@@ -174,6 +176,8 @@ class MainWindow(QMainWindow):
                 self.canvas.setMainMode(MainMode.FLIP_MODE)
                 self.canvas.message.emit("Switched to: FLIP MODE")
                 self.button5.setChecked(True)
+                self.button5.setStyleSheet("color: yellow; background-color: black")
+                self.button5.setText("EDIT")
                 self.button12.setEnabled(True)
                 self.button13.setEnabled(True)
                 self.button14.setEnabled(True)
@@ -181,6 +185,7 @@ class MainWindow(QMainWindow):
                 self.button2.setEnabled(False)
                 self.button3.setEnabled(False)
                 self.button4.setEnabled(False)
+                self.canvas.drawGraph()
                 self.canvas.first_point, self.canvas.second_point = None, None
                 self.check_sub_mode(SubMode.DRAW_EDGE)
         else:
@@ -193,12 +198,16 @@ class MainWindow(QMainWindow):
                 self.canvas.setMainMode(MainMode.EDIT_MODE)
                 self.canvas.message.emit("Switched to: EDIT MODE")
                 self.button5.setChecked(False)
+                self.button5.setStyleSheet("color: black; background-color: yellow")
+                self.button5.setText("FLIP")
                 self.button12.setEnabled(False)
                 self.button13.setEnabled(False)
                 self.button14.setEnabled(False)
                 self.button1.setEnabled(True)
                 self.button2.setEnabled(True)
                 self.button3.setEnabled(True)
+                self.button4.setEnabled(True)
+                self.canvas.drawGraph()
                 self.canvas.first_point, self.canvas.second_point = None, None
     
     """
