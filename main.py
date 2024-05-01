@@ -1,36 +1,58 @@
 import sys
-from PyQt5.QtWidgets import (QToolBar, QMainWindow,
-                             QMainWindow,QApplication,QDialog)
-from Randomizer import *
-from Solver import *
-from Wrapper import *
 
-VERSION = "v.2024-4-1"
-        
+from PyQt5.QtCore import QSize
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QToolBar
+
+from Canvas import Canvas
+from Canvas import MainMode
+from Canvas import SubMode
+
+from Randomizer import Randomizer
+from Randomizer import RandomizerThread
+from Randomizer import RandomizerWaitBox
+
+from Solver import Solver
+from Solver import SolverThread
+from Solver import SolverWaitBox
+
+from Wrapper import Wrapper
+from Wrapper import WrapperThread
+from Wrapper import WrapperWaitBox
+
+VERSION = "v.2024-4-30"
+
+
 class MainWindow(QMainWindow):
-    """
-    The MainWindow class.
-    
-    Built upon the QMainWindow class from the PyQt5 framework.
-    
-    Initialize the main program.
-    """
+
     def __init__(self, width, height):
+        """
+        The MainWindow class.
+
+        Built upon the QMainWindow class from the PyQt5 framework.
+
+        Initialize the main program.
+        """
         super(MainWindow, self).__init__()
 
         self.width_ = width
         self.height_ = height
-        
+
         self.oldsize = QSize(width, height)
-        
+
         # MainWindow set
         self.setWindowTitle("FlipGraphin")
-        self.setMinimumSize(QSize(800,600))
-        
+        self.setMinimumSize(QSize(800, 600))
+
         # Variables
         self.main_mode_ = MainMode.EDIT_MODE
         self.sub_mode_ = SubMode.DRAW_NODE
-        
+
         # Canvas
         self.canvas = Canvas(self.width_, self.height_)
         self.setCentralWidget(self.canvas)
@@ -44,12 +66,11 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.toolbar2)
         self.addToolBarBreak()
         self.addToolBar(Qt.TopToolBarArea, self.toolbar3)
-        
+
         self.toolbar1.setFixedHeight(32)
         self.toolbar2.setFixedHeight(32)
         self.toolbar3.setFixedHeight(32)
-        
-        
+
         self.button1 = QPushButton("NODE")
         self.button2 = QPushButton("EDGE")
         self.button3 = QPushButton("DEL_NODE")
@@ -69,16 +90,16 @@ class MainWindow(QMainWindow):
         self.button17 = QPushButton("ABOUT")
         self.button18 = QPushButton("HELP")
         self.statusText = QLabel("Welcome")
-        self.buttons = [self.button1,self.button2,self.button3,self.button4]
-        self.check_dict = {SubMode.DRAW_NODE:0, SubMode.DRAW_EDGE:1,
-                      SubMode.DEL_NODE:2,SubMode.DEL_EDGE:3}
-        
+        self.buttons = [self.button1, self.button2, self.button3, self.button4]
+        self.check_dict = {SubMode.DRAW_NODE: 0, SubMode.DRAW_EDGE: 1,
+                           SubMode.DEL_NODE: 2, SubMode.DEL_EDGE: 3}
+
         # Flip Button
         self.toolbar1.addWidget(self.button5)
         self.button5.setCheckable(True)
         self.button5.setStyleSheet("color: black; background-color: yellow")
         self.toolbar1.addSeparator()
-        
+
         # Basic functions
         for button in self.buttons:
             button.setCheckable(True)
@@ -86,12 +107,12 @@ class MainWindow(QMainWindow):
             self.toolbar1.addWidget(button)
         self.button1.setChecked(True)
         self.toolbar1.addSeparator()
-        
+
         # Flip graph specific functions
         self.toolbar1.addWidget(self.button12)
         self.toolbar1.addWidget(self.button13)
         self.toolbar1.addWidget(self.button14)
-        
+
         # Advanced functions
         self.toolbar2.addWidget(self.button6)
         self.toolbar2.addWidget(self.button8)
@@ -100,22 +121,28 @@ class MainWindow(QMainWindow):
         self.toolbar2.addWidget(self.button11)
         self.toolbar2.addWidget(self.button7)
         self.toolbar2.addSeparator()
-        
-       
+
         # Miscellaneous functions
         self.toolbar2.addWidget(self.button15)
         self.toolbar2.addWidget(self.button16)
-        
+
         self.toolbar3.addWidget(self.button17)
         self.toolbar3.addWidget(self.button18)
         self.toolbar3.addSeparator()
         self.toolbar3.addWidget(self.statusText)
-        
-            
-        self.button1.clicked.connect(lambda: self.check_sub_mode(SubMode.DRAW_NODE))
-        self.button2.clicked.connect(lambda: self.check_sub_mode(SubMode.DRAW_EDGE))
-        self.button3.clicked.connect(lambda: self.check_sub_mode(SubMode.DEL_NODE))
-        self.button4.clicked.connect(lambda: self.check_sub_mode(SubMode.DEL_EDGE))
+
+        self.button1.clicked.connect(
+            lambda: self.check_sub_mode(
+                SubMode.DRAW_NODE))
+        self.button2.clicked.connect(
+            lambda: self.check_sub_mode(
+                SubMode.DRAW_EDGE))
+        self.button3.clicked.connect(
+            lambda: self.check_sub_mode(
+                SubMode.DEL_NODE))
+        self.button4.clicked.connect(
+            lambda: self.check_sub_mode(
+                SubMode.DEL_EDGE))
         self.button5.clicked.connect(lambda: self.switch_flip_mode())
         self.button6.clicked.connect(lambda: self.canvas.reset())
         self.button7.clicked.connect(lambda: self.canvas.show_ch())
@@ -133,25 +160,25 @@ class MainWindow(QMainWindow):
         self.canvas.message.connect(self.statusText.setText)
         self.canvas.main_mode_change.connect(self.switch_flip_mode)
         self.canvas.sub_mode_change.connect(self.check_sub_mode)
-        
+
         # disabled
         self.button12.setEnabled(False)
         self.button13.setEnabled(False)
         self.button14.setEnabled(False)
-    
+
     # Methods for buttons
-    
-    """
-    Check the mode of the program based on the buttons clicked.
-    Applied buttons are: NODE, EDGE, DEL_NODE, DEL_EDGE
-    
-    Parameters:
-    -----------
-    mode_after: Mode
-        the Mode after the function call
-    """
-    def check_sub_mode(self,mode_after = None):
-        if (mode_after != None):
+
+    def check_sub_mode(self, mode_after=None):
+        """
+        Check the mode of the program based on the buttons clicked.
+        Applied buttons are: NODE, EDGE, DEL_NODE, DEL_EDGE
+
+        Parameters:
+        -----------
+        mode_after: Mode
+            the Mode after the function call
+        """
+        if (mode_after is not None):
             if (self.sub_mode_ == SubMode.START):
                 self.buttons[self.check_dict[mode_after]].setChecked(True)
             else:
@@ -160,14 +187,14 @@ class MainWindow(QMainWindow):
             self.sub_mode_ = mode_after
             self.canvas.first_point, self.canvas.second_point = None, None
             self.canvas.setSubMode(mode_after)
-    
-    """
-    Switch between MAIN mode and FLIP mode.
-    """
 
     def switch_flip_mode(self):
+        """
+        Switch between MAIN mode and FLIP mode.
+        """
         if (self.main_mode_ == MainMode.EDIT_MODE):
-            if (self.canvas.graph.crosses() or not self.canvas.graph.is_spanning_path()):
+            if (self.canvas.graph.crosses()
+                    or not self.canvas.graph.is_spanning_path()):
                 self.canvas.message.emit("CANNOT SWITCH: Not a valid path")
                 self.canvas.first_point, self.canvas.second_point = None, None
                 self.button5.setChecked(False)
@@ -176,7 +203,8 @@ class MainWindow(QMainWindow):
                 self.canvas.setMainMode(MainMode.FLIP_MODE)
                 self.canvas.message.emit("Switched to: FLIP MODE")
                 self.button5.setChecked(True)
-                self.button5.setStyleSheet("color: yellow; background-color: black")
+                self.button5.setStyleSheet(
+                    "color: yellow; background-color: black")
                 self.button5.setText("EDIT")
                 self.button12.setEnabled(True)
                 self.button13.setEnabled(True)
@@ -189,7 +217,8 @@ class MainWindow(QMainWindow):
                 self.canvas.first_point, self.canvas.second_point = None, None
                 self.check_sub_mode(SubMode.DRAW_EDGE)
         else:
-            if (self.canvas.graph.getNodes() and (self.canvas.graph.crosses() or not self.canvas.graph.is_spanning_path())):
+            if (self.canvas.graph.getNodes() and (
+                    self.canvas.graph.crosses() or not self.canvas.graph.is_spanning_path())):
                 self.canvas.message.emit("CANNOT SWITCH: Not a valid path")
                 self.canvas.first_point, self.canvas.second_point = None, None
                 self.button5.setChecked(True)
@@ -198,7 +227,8 @@ class MainWindow(QMainWindow):
                 self.canvas.setMainMode(MainMode.EDIT_MODE)
                 self.canvas.message.emit("Switched to: EDIT MODE")
                 self.button5.setChecked(False)
-                self.button5.setStyleSheet("color: black; background-color: yellow")
+                self.button5.setStyleSheet(
+                    "color: black; background-color: yellow")
                 self.button5.setText("FLIP")
                 self.button12.setEnabled(False)
                 self.button13.setEnabled(False)
@@ -209,11 +239,11 @@ class MainWindow(QMainWindow):
                 self.button4.setEnabled(True)
                 self.canvas.drawGraph()
                 self.canvas.first_point, self.canvas.second_point = None, None
-    
-    """
-    Start the randomizer thread.
-    """
+
     def start_randomize(self):
+        """
+        Start the randomizer thread.
+        """
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.canvas.message.emit("Not available in EDIT mode.")
         else:
@@ -221,12 +251,11 @@ class MainWindow(QMainWindow):
             self.thread = RandomizerThread(self.randomizer)
             self.waitbox = RandomizerWaitBox(self.thread)
             self.waitbox.randomize()
-            
-    """
-    Start the solver thread.
-    """
-        
+
     def start_solve(self):
+        """
+        Start the solver thread.
+        """
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.canvas.message.emit("Not available in EDIT mode.")
         else:
@@ -235,11 +264,11 @@ class MainWindow(QMainWindow):
             self.thread = SolverThread(self.solver)
             self.waitbox = SolverWaitBox(self.thread)
             self.waitbox.solve()
-        
-    """ 
-    Start the wrapper thread.
-    """
+
     def start_wrap(self):
+        """
+        Start the wrapper thread.
+        """
         if (self.main_mode_ == MainMode.EDIT_MODE):
             self.canvas.message.emit("Not available in EDIT mode.")
         else:
@@ -248,12 +277,18 @@ class MainWindow(QMainWindow):
             self.thread = WrapperThread(self.wrapper)
             self.waitbox = WrapperWaitBox(self.thread)
             self.waitbox.wrap()
-    
+
     def about_page(self):
+        """
+        Display the about page
+        """
         msg = "A Graph Drawing Program\nVersion: " + VERSION
-        msgbox = QMessageBox.about(self,"FlipGraphin",msg)
-        
+        QMessageBox.about(self, "FlipGraphin", msg)
+
     def help_page(self):
+        """
+        Display the help page
+        """
         msg = "General Functionality:\n\n"
         msg += "NODE: Append a node at the end of the path\n"
         msg += "EDGE: Click on two points to draw an edge\n"
@@ -275,39 +310,44 @@ class MainWindow(QMainWindow):
         msg += "LOAD: Load a .grph file\n"
         msg += "ABOUT: Display the about page\n"
         msg += "HELP: Display this page\n"
-        msgbox = QMessageBox.about(self,"FlipGraphin",msg)
-        
-    def resizeEvent(self,e):
+        QMessageBox.about(self, "FlipGraphin", msg)
+
+    def resizeEvent(self, e):
+        """
+        Resize the canvas when the window is resized.
+        """
         if (not self.isMaximized()):
             self.oldsize = e.oldSize()
         else:
             self.resize(self.oldsize.width(), self.oldsize.height())
         self.canvas.graph.compute_ch()
-        
-    """
-    Request to save the graph before closing the program.
-    
-    Parameters:
-    -----------
-    e: QtGui.QMouseEvent
-    """
-    def closeEvent(self,e):
+
+    def closeEvent(self, e):
+        """
+        Request to save the graph before closing the program.
+
+        Parameters:
+        -----------
+        e: QtGui.QMouseEvent
+        """
         msg = "You're about to exit the program.\nWould you like to save?"
-        msgbox = QMessageBox.question(self,"FlipGraphin",msg,QMessageBox.StandardButtons(QMessageBox.Cancel | QMessageBox.Yes | QMessageBox.No))
-        
+        msgbox = QMessageBox.question(
+            self, "FlipGraphin", msg, QMessageBox.StandardButtons(
+                QMessageBox.Cancel | QMessageBox.Yes | QMessageBox.No))
+
         if (msgbox == QMessageBox.Yes):
             self.canvas.saveGraph()
             e.accept()
-        elif(msgbox == QMessageBox.No):
+        elif (msgbox == QMessageBox.No):
             e.accept()
         else:
             e.ignore()
-            
-    
-"""
-The main function.
-"""
+
+
 if __name__ == '__main__':
+    """
+    The main function.
+    """
     app = QApplication(sys.argv)
     size = app.primaryScreen().size()
     window = MainWindow(size.width(), size.height())
